@@ -24,7 +24,7 @@
 
   </body>
   <script>
-    const localVideo = cocument.getElementById('local_video');
+    const localVideo = document.getElementById('local_video');
     const canvas = document.getElementById('draw_canvas');
     const ctx = canvas.getContext('2d');
     ctx.font =  '40px Arial';
@@ -62,6 +62,42 @@
       const str = `${h}:${m}:${s}`;
       ctx.clearRect(0, 0, 240, 180);
       ctx.fillText(str, 10, 80);
+
+      encodeImage();
+    }
+
+    let encoder = null;
+    async function startEncode() {
+      encoder = new VideoEncoder({
+        output: (chunk) => {
+          console.log('encoded');
+        },
+        error : (err) => {
+          console.error(err);
+        }
+      });
+
+      await encoder.configure({
+        codec: 'vp8',
+        width: 240,
+        height: 180,
+        framerate: 30
+      });
+    }
+
+
+    let frameCount = 0;
+    const FRAME_DURATION = 500*1000; // micro sec.
+    function encodeImage() {
+      if (! encoder) return;
+
+      const frame = new VideoFrame(canvas, {
+        timestamp: frameCount * FRAME_DURATION,
+        duration: FRAME_DURATION
+      });
+      frameCount++;
+      encoder.encode(frame);
+      frame.close();
     }
   </script>
 </html>
