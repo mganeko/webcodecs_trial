@@ -24,6 +24,10 @@
 
   </body>
   <script>
+    // TODO:
+    //   Decoder と Canavasを使ってみる
+    //
+
     const localVideo = document.getElementById('local_video');
     const canvas = document.getElementById('draw_canvas');
     const ctx = canvas.getContext('2d');
@@ -114,8 +118,9 @@
         timestamp: frameCount * FRAME_DURATION,
         duration: FRAME_DURATION
       });
+      const requestKeyFrame = ( (frameCount % 10) === 0);
       frameCount++;
-      encoder.encode(frame);
+      encoder.encode(frame, { keyFrame: requestKeyFrame });
       frame.close();
     }
   </script>
