@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>WebCodecs</title>
+  </head>
+  <body>
+    <div>
+      Canvas
+      <button id="start_clock_button" onclick="startClock()">Start Clock</button>
+      <button id="stop_clock_button" onclick="stopClock()">Stop Clock</button>
+    </div>
+
+    <canvas id="draw_canvas" width="240px" height="180px" style="border:black solid 1px;">
+    </canvas>
+    <br />
+    <div>
+      Video
+      <button id="start_encode_button" onclick="startEncode()">Start Encode</button>
+    </div>
+    <video id="local_video" width="240" height="180px" style="border:black solid 1px;">
+    </video>
+
+
+
+  </body>
+  <script>
+    const localVideo = cocument.getElementById('local_video');
+    const canvas = document.getElementById('draw_canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.font =  '40px Arial';
+    ctx.fillText('Hello World!', 10, 80);
+    let timerId = 0;
+
+
+    function startClock() {
+      if (timerId === 0) {
+        timerId = setInterval(
+          drawClock, 500
+        );
+        console.log('Clock start. timerId=', timerId);
+      }
+      else {
+        console.warn('Timer already started');
+      }
+    }
+
+    function stopClock() {
+      if (timerId !== 0) {
+        clearInterval(timerId);
+        timerId = 0;
+      }
+      else {
+        console.warn('Timer NOT started');
+      }
+    }
+
+    function drawClock() {
+      const d = new Date();
+      const h = d.getHours();
+      const m = d.getMinutes();
+      const s = d.getSeconds();
+      const str = `${h}:${m}:${s}`;
+      ctx.clearRect(0, 0, 240, 180);
+      ctx.fillText(str, 10, 80);
+    }
+  </script>
+</html>
