@@ -14,11 +14,11 @@
     </canvas>
     <br />
     <div>
-      Video
+      Canvas
       <button id="start_encode_button" onclick="startEncode()">Start Encode</button>
     </div>
-    <video id="local_video" width="240" height="180px" style="border:black solid 1px;">
-    </video>
+    <canvas id="playback_canvas" width="240" height="180px" style="border:black solid 1px;">
+    </cancas>
 
 
 
@@ -28,12 +28,16 @@
     //   Decoder と Canavasを使ってみる
     //
 
-    const localVideo = document.getElementById('local_video');
     const canvas = document.getElementById('draw_canvas');
     const ctx = canvas.getContext('2d');
     ctx.font =  '40px Arial';
     ctx.fillText('Hello World!', 10, 80);
     let timerId = 0;
+
+    const playbackCanvas = document.getElementById('playback_canvas');
+    const ctxPlayback = playbackCanvas.getContext('2d');
+    ctxPlayback.font =  '40px Arial';
+    ctxPlayback.fillText('Playback', 10, 80);
 
     const INTERVAL_MILISEC = 500;
 
@@ -74,15 +78,14 @@
     }
 
     let encoder = null;
-    let generator = null;
-    let writer = null;
-    let mediaStream = null;
+    let decoder = null;
+;
     async function startEncode() {
       encoder = new VideoEncoder({
         output: (chunk) => {
           console.log('encoded');
-          if (writer) {
-            writer.write(chunk);
+          if (decoder) {
+            decoder.decode(chunk);
           }
         },
         error : (err) => {
@@ -97,15 +100,17 @@
         framerate: 30
       });
 
-      generator = new MediaStreamTrackGenerator({ kind: 'video' });
-      writer = generator.writable.getWriter();
-      await writer.ready;
-      mediaStream = new MediaStream();
-      mediaStream.addTrack(generator);
-      localVideo.srcObject = mediaStream;
-      await localVideo.play().catch(err => {
-        console.error('play ERROR:', err);
-      });
+      decoder = new VideoDecoder({
+        output: async (frame) => {
+          console.log('decoded');
+          ctxPlayback.drawImage(frame, 0, 0);
+          frame.close();
+        },
+        error: (err) => {
+          console.error(err)
+        }
+      })
+      await decoder.configure({ codec: 'vp8' })
     }
 
 
