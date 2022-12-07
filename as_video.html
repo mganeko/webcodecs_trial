@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>WebCodecs</title>
+  </head>
+  <body>
+    <div>
+      Canvas
+      <button id="start_clock_button" onclick="startClock()">Start Clock</button>
+      <button id="stop_clock_button" onclick="stopClock()">Stop Clock</button>
+    </div>
+
+    <canvas id="draw_canvas" width="240px" height="180px" style="border:black solid 1px;">
+    </canvas>
+    <br />
+    <div>
+      Video
+      <button id="start_encode_button" onclick="startEncode()">Start Encode</button>
+    </div>
+    <video id="local_video" width="240" height="180px" style="border:black solid 1px;">
+    </video>
+
+
+
+  </body>
+  <script>
+    const localVideo = document.getElementById('local_video');
+    const canvas = document.getElementById('draw_canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.font =  '40px Arial';
+    ctx.fillText('Hello World!', 10, 80);
+    let timerId = 0;
+
+    const INTERVAL_MILISEC = 500;
+
+    function startClock() {
+      if (timerId === 0) {
+        timerId = setInterval(
+          drawClock, INTERVAL_MILISEC
+        );
+        console.log('Clock start. timerId=', timerId);
+      }
+      else {
+        console.warn('Timer already started');
+      }
+    }
+
+    function stopClock() {
+      if (timerId !== 0) {
+        clearInterval(timerId);
+        timerId = 0;
+      }
+      else {
+        console.warn('Timer NOT started');
+      }
+    }
+
+    const SRC_WIDTH=240;
+    const SRC_HEIGHT=180;
+    function drawClock() {
+      const d = new Date();
+      const h = d.getHours();
+      const m = d.getMinutes();
+      const s = d.getSeconds();
+      const str = `${h}:${m}:${s}`;
+      ctx.clearRect(0, 0, SRC_WIDTH, SRC_HEIGHT);
+      ctx.fillText(str, 10, 80);
+
+      encodeImage();
+    }
+
+    let encoder = null;
+    let generator = null;
+    let writer = null;
+    let mediaStream = null;
+    async function startEncode() {
+      encoder = new VideoEncoder({
+        output: (chunk) => {
+          console.log('encoded');
+          if (writer) {
+            writer.write(chunk);
+          }
+        },
+        error : (err) => {
+          console.error(err);
+        }
+      });
+
+      await encoder.configure({
+        codec: 'vp8',
+        width: SRC_WIDTH,
+        height: SRC_HEIGHT,
+        framerate: 30
+      });
+
+      generator = new MediaStreamTrackGenerator({ kind: 'video' });
+      writer = generator.writable.getWriter();
+      await writer.ready;
+      mediaStream = new MediaStream();
+      mediaStream.addTrack(generator);
+      localVideo.srcObject = mediaStream;
+      await localVideo.play().catch(err => {
+        console.error('play ERROR:', err);
+      });
+    }
+
+
+    let frameCount = 0;
+    const FRAME_DURATION = INTERVAL_MILISEC*1000; // micro sec.
+    function encodeImage() {
+      if (! encoder) return;
+
+      const frame = new VideoFrame(canvas, {
+        timestamp: frameCount * FRAME_DURATION,
+        duration: FRAME_DURATION
+      });
+      const requestKeyFrame = ( (frameCount % 10) === 0);
+      frameCount++;
+      encoder.encode(frame, { keyFrame: requestKeyFrame });
+      frame.close();
+    }
+  </script>
+</html>
