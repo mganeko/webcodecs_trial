@@ -65,6 +65,9 @@
 
     const SRC_WIDTH=240;
     const SRC_HEIGHT=180;
+    const DEST_WIDTH=240;
+    const DEST_HEIGHT=180;
+
     function drawClock() {
       const d = new Date();
       const h = d.getHours();
@@ -125,7 +128,11 @@
       });
       const requestKeyFrame = ( (frameCount % 10) === 0);
       frameCount++;
-      encoder.encode(frame, { keyFrame: requestKeyFrame });
+      //encoder.encode(frame, { keyFrame: requestKeyFrame });
+
+      ctxPlayback.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
+      ctxPlayback.drawImage(frame, 0, 0);
+
       frame.close();
     }
   </script>
