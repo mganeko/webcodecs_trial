@@ -88,17 +88,26 @@
     let encoder = null;
     let decoder = null;
     let trackProcessor = null;
+    let trackGenerator = null;
+    let writer = null;
+    let mediaStream = null;
 
     const CAPTURE_RATE = 30;
     async function startEncode() {
       srcStream = canvas.captureStream(CAPTURE_RATE);
 
-      playbackVideo.srcObject = srcStream;
-      await playbackVideo.play().catch(err => console.error(err));
+      //playbackVideo.srcObject = srcStream;
+      //await playbackVideo.play().catch(err => console.error(err));
       const videoTrack = srcStream.getVideoTracks()[0];
       console.log('VideoTrack:', videoTrack);
       trackProcessor = new MediaStreamTrackProcessor(videoTrack);
       const reader = trackProcessor.readable.getReader();
+
+      trackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
+      writer = trackGenerator.writable.getWriter();
+      await writer.ready;
+      mediaStream = new MediaStream();
+      mediaStream.addTrack(trackGenerator);
 
       encoder = new VideoEncoder({
         output: (chunk) => {
@@ -123,8 +132,9 @@
         output: async (frame) => {
           console.log('decoded');
           console.log('destFrame:', frame);
-          ctxPlayback.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
-          ctxPlayback.drawImage(frame, 0, 0);
+          //ctxPlayback.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
+          //ctxPlayback.drawImage(frame, 0, 0);
+          writer.write(frame);
           frame.close();
         },
         error: (err) => {
@@ -132,6 +142,11 @@
         }
       })
       await decoder.configure({ codec: 'vp8' });
+
+      playbackVideo.srcObject = mediaStream;
+      playbackVideo.play().then( console.log('video start')).catch(err => {
+        console.error('play ERROR:', err);
+      });
 
       let frameCounter = 0;
       while (true) {
