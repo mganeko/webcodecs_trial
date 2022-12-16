@@ -44,8 +44,9 @@
 </body>
 <script>
   // TODO:
-  //   Decoder と Canavasを使ってみる
-  //   Canvas->Stream->Processer->Encocer->Decoder->
+  //  Camera の Streamでやってみる
+  //  行儀よく停止させる
+  // https://w3c.github.io/mediacapture-transform/#video-processing
 
   // const canvas = document.getElementById('draw_canvas');
   // const ctx = canvas.getContext('2d');
@@ -130,6 +131,7 @@
   let encoder = null;
   let decoder = null;
   let trackProcessor = null;
+  let reader = null;
   let trackGenerator = null;
   let writer = null;
   let mediaStream = null;
@@ -143,7 +145,7 @@
     const videoTrack = srcStream.getVideoTracks()[0];
     console.log('VideoTrack:', videoTrack);
     trackProcessor = new MediaStreamTrackProcessor(videoTrack);
-    const reader = trackProcessor.readable.getReader();
+    reader = trackProcessor.readable.getReader();
 
     trackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
     writer = trackGenerator.writable.getWriter();
@@ -153,7 +155,7 @@
 
     encoder = new VideoEncoder({
       output: (chunk) => {
-        console.log('encoded:', chunk);
+        //console.log('encoded:', chunk);
         if (decoder) {
           decoder.decode(chunk);
         }
@@ -172,10 +174,10 @@
 
     decoder = new VideoDecoder({
       output: async (frame) => {
-        console.log('decoded');
-        console.log('destFrame:', frame);
-        //ctxPlayback.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
-        //ctxPlayback.drawImage(frame, 0, 0);
+        //console.log('decoded');
+        //console.log('destFrame:', frame);
+        ////ctxPlayback.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
+        ////ctxPlayback.drawImage(frame, 0, 0);
         writer.write(frame);
         frame.close();
       },
@@ -193,7 +195,12 @@
     let frameCounter = 0;
     while (true) {
       const result = await reader.read();
-      if (result.done) break;
+      if (result.done) {
+        console.log('--Encode DONE--');
+        await cleanupEncoderDecoder();
+        await cleanupGenerator();
+        break;
+      }
 
       const frame = result.value;
       if (encoder.encodeQueueSize > 2) {
@@ -209,6 +216,64 @@
     }
   }
 
+  async function stopEncode() {
+    await cleanupProcessor();
+    //await cleanupGenerator();
+
+    stopPlayback();
+  }
+
+  function stopPlayback() {
+    playbackVideo.pause();
+    playbackVideo.srcObject = null;
+  }
+
+  async function cleanupProcessor() {
+    if (!reader) return;
+    if (!trackProcessor) return;
+
+    console.log('-- cleanup processor');
+    await reader.cancel();
+    reader.releaseLock()
+    reader = null;
+
+    await trackProcessor.readable.cancel();
+    trackProcessor = null;
+  }
+
+  async function cleanupGenerator() {
+    if (!writer) return;
+    if (!trackGenerator) return;
+
+    console.log('-- cleanup generator');
+    //await writer.abort();
+    writer.releaseLock()
+    writer = null;
+
+    await trackGenerator.writable.close();
+    trackGenerator = null;
+
+    if (mediaStream) {
+      mediaStream.getVideoTracks().forEach(track => track.stop());
+      mediaStream = null;
+    }
+  }
+
+  async function cleanupEncoderDecoder() {
+    console.log('-- cleanup EncoderDecoder');
+
+    if (encoder) {
+      await encoder.flush();
+      await encoder.close();
+      encoder = null;
+    }
+
+    if (decoder) {
+      await decoder.flush();
+      await decoder.close();
+      decoder = null;
+    }
+  }
 
   let frameCount = 0;
   const FRAME_DURATION = INTERVAL_MILISEC * 1000; // micro sec.
