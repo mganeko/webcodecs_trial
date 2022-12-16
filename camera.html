@@ -35,6 +35,7 @@
   <div>
     Video
     <button id="start_encode_button" onclick="startEncode()">Start Encode</button>
+    <button id="start_encode_direct_button" onclick="startEncodeDirect()">Start Direct Encode</button>
     <button id="stop_encode_button" onclick="stopEncode()">Stop Encode</button>
   </div>
   <video id="plaback_video" width="240" height="180px" style="border:black solid 1px;">
@@ -272,6 +273,40 @@
       await decoder.flush();
       await decoder.close();
       decoder = null;
+    }
+  }
+
+
+  async function startEncodeDirect() {
+    const videoTrack = srcStream.getVideoTracks()[0];
+    console.log('VideoTrack:', videoTrack);
+    trackProcessor = new MediaStreamTrackProcessor(videoTrack);
+    reader = trackProcessor.readable.getReader();
+
+    trackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
+    writer = trackGenerator.writable.getWriter();
+    await writer.ready;
+    mediaStream = new MediaStream();
+    mediaStream.addTrack(trackGenerator);
+
+    playbackVideo.srcObject = mediaStream;
+    playbackVideo.play().then(console.log('video start')).catch(err => {
+      console.error('play ERROR:', err);
+    });
+
+    let frameCounter = 0;
+    while (true) {
+      const result = await reader.read();
+      if (result.done) {
+        console.log('--Encode DONE--');
+        await cleanupEncoderDecoder();
+        await cleanupGenerator();
+        break;
+      }
+
+      const frame = result.value;
+      writer.write(frame);
+      frame.close();
     }
   }
 
