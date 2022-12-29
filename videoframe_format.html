@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Format</title>
+</head>
+
+<script>
+  const FRAME_DURATION = 100 * 1000;  // Micro Seconds
+  function getFrame() {
+    const frame1 = getFrame1();
+    console.log('Frame1:', frame1); // format: "BGRX"
+    //frame1.close();
+    
+    const frame2 = getFrame2();
+    console.log('Frame2:', frame2); // format: "BGRX"
+    //frame2.close();
+
+    const frame3 = getVideoFrame();
+    console.log('Frame3:', frame3); // format: "NV12"
+    //frame3.close();
+  }
+
+  function getFrame1() {
+    const img1 = document.getElementById('img1');
+
+    const count1 = 0;
+    const frame1 = new VideoFrame(img1, {
+      timestamp: count1 * FRAME_DURATION,
+      duration: FRAME_DURATION,
+    });
+
+    return frame1;
+  }
+
+  function getFrame2() {
+    const img2 = document.getElementById('img2');
+    const count2 = 1;
+    const frame2 =  new VideoFrame(img2, {
+      timestamp: count2 * FRAME_DURATION,
+      duration: FRAME_DURATION,
+    });
+    return frame2;
+  }
+
+  function getVideoFrame() {
+    const srcVideo = document.getElementById('src_video');
+    const countV = 2;
+    const frameV =  new VideoFrame(srcVideo, {
+      timestamp: countV * FRAME_DURATION,
+      duration: FRAME_DURATION,
+    });
+    return frameV;
+  }
+
+  function drawFrame1() {
+    const frame1 = getFrame1();
+
+    destCtx.drawImage(frame1, 0, 0); // OK
+    frame1.close();
+  }
+
+  function drawFrame2() {
+    const frame2 = getFrame2();
+
+    destCtx.drawImage(frame2, 320, 240, 320, 240, 0, 0, 240, 180); // OK
+    frame2.close();
+  }
+
+  function drawFrameV() {
+    const frameV = getVideoFrame();
+
+    destCtx.drawImage(frameV, 0, 0);
+    frameV.close();
+  }
+</script>
+
+<body>
+  <button onclick="getFrame()">Frame</button>
+  <br />
+  <img id="img1" src="img/test1.jpg"  width="240px" height="180px" />
+  <img id="img2" src="img/test2.png"  width="240px" height="180px" />
+
+  <!--
+    Video: 「ＮＨＫクリエイティブ･ライブラリー」
+    https://www2.nhk.or.jp/archives/creative/material/view.cgi?m=D0002161350_00000
+  -->
+  <video id="src_video" src="video/D0002161350_00000.mp4"  width="240px" height="180px" controls="1" /></video>
+  <br />
+  <button onclick="drawFrame1()">draw frame1</button>&nbsp;
+  <button onclick="drawFrame2()">draw frame2</button>&nbsp;
+  <button onclick="drawFrameV()">draw Video</button>&nbsp;
+  <br />
+  <canvas id="dest_canvas" width="240px" height="180px" style="border:black solid 1px;">
+  </canvas>
+
+</body>
+<script>
+  const destCanvas = document.getElementById('dest_canvas');
+  const destCtx = destCanvas.getContext('2d');
+
+  // document.getElementById('src_video').addEventListener('loadedmetadata',
+  //   function() {
+  //     this.currentTime = 10;
+  //   },
+  // false);
+</script>
+</html>
