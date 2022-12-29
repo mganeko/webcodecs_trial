@@ -21,6 +21,12 @@
     //frame3.close();
   }
 
+  function getCameraFrameFormat() {
+    const frameC = getCameraFrame();
+    console.log('FrameC:', frameC); // format:  "NV12"
+    //frameC.close();
+  }
+
   function getFrame1() {
     const img1 = document.getElementById('img1');
 
@@ -53,6 +59,16 @@
     return frameV;
   }
 
+  function getCameraFrame() {
+    const localVideo = document.getElementById('local_video');
+    const countCamera = 3;
+    const frameCamera =  new VideoFrame(localVideo, {
+      timestamp: countCamera * FRAME_DURATION,
+      duration: FRAME_DURATION,
+    });
+    return frameCamera;
+  }
+
   function drawFrame1() {
     const frame1 = getFrame1();
 
@@ -73,10 +89,26 @@
     destCtx.drawImage(frameV, 0, 0);
     frameV.close();
   }
+
+  function drawCameraFrame() {
+    const frame = getCameraFrame();
+
+    destCtx.drawImage(frame, 0, 0);
+    frame.close();
+  }
+
+  async function startCamera() {
+    const localVideo = document.getElementById('local_video');
+    const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: false});
+    localVideo.srcObject = stream;
+    await localVideo.play();
+  }
 </script>
 
 <body>
-  <button onclick="getFrame()">Frame</button>
+  <button onclick="getFrame()">Frame</button>&nbsp;
+  <button onclick="startCamera()">Camera</button>
+  <button onclick="getCameraFrameFormat()">Camera Frame</button>
   <br />
   <img id="img1" src="img/test1.jpg"  width="240px" height="180px" />
   <img id="img2" src="img/test2.png"  width="240px" height="180px" />
@@ -86,10 +118,12 @@
     https://www2.nhk.or.jp/archives/creative/material/view.cgi?m=D0002161350_00000
   -->
   <video id="src_video" src="video/D0002161350_00000.mp4"  width="240px" height="180px" controls="1" /></video>
+  <video id="local_video" width="240px" height="180px" /></video>
   <br />
   <button onclick="drawFrame1()">draw frame1</button>&nbsp;
   <button onclick="drawFrame2()">draw frame2</button>&nbsp;
   <button onclick="drawFrameV()">draw Video</button>&nbsp;
+  <button onclick="drawCameraFrame()">draw Camera</button>&nbsp;
   <br />
   <canvas id="dest_canvas" width="240px" height="180px" style="border:black solid 1px;">
   </canvas>
