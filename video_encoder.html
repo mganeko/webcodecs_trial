@@ -60,6 +60,7 @@
   function drawFrame1() {
     const frame1 = getFrame1();
 
+    destCtx.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
     destCtx.drawImage(frame1, 0, 0); // OK
     frame1.close();
   }
@@ -67,6 +68,7 @@
   function drawFrame2() {
     const frame2 = getFrame2();
 
+    destCtx.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
     destCtx.drawImage(frame2, 320, 240, 320, 240, 0, 0, 240, 180); // OK
     frame2.close();
   }
@@ -74,6 +76,7 @@
   function drawFrameV() {
     const frameV = getVideoFrame();
 
+    destCtx.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
     destCtx.drawImage(frameV, 0, 0);
     frameV.close();
   }
@@ -81,6 +84,7 @@
   function drawCameraFrame() {
     const frame = getCameraFrame();
 
+    destCtx.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
     destCtx.drawImage(frame, 0, 0);
     frame.close();
   }
