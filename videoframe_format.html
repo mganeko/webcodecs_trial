@@ -7,7 +7,7 @@
 
 <script>
   const FRAME_DURATION = 100 * 1000;  // Micro Seconds
-  function getFrame() {
+  function checkFrame() {
     const frame1 = getFrame1();
     console.log('Frame1:', frame1); // format: "BGRX"
     //frame1.close();
@@ -21,52 +21,40 @@
     //frame3.close();
   }
 
-  function getCameraFrameFormat() {
+  function checkCameraFrame() {
     const frameC = getCameraFrame();
     console.log('FrameC:', frameC); // format:  "NV12"
     //frameC.close();
   }
 
-  function getFrame1() {
-    const img1 = document.getElementById('img1');
+  function getElement(id) {
+    const element = document.getElementById(id);
+    return element;
+  }
 
-    const count1 = 0;
-    const frame1 = new VideoFrame(img1, {
-      timestamp: count1 * FRAME_DURATION,
+  function getFrame(element, frameCount) {
+    const frame = new VideoFrame(element, {
+      timestamp: frameCount * FRAME_DURATION,
       duration: FRAME_DURATION,
     });
 
-    return frame1;
+    return frame;
+  }
+
+  function getFrame1() {
+    return getFrame(getElement('img1'), 0);
   }
 
   function getFrame2() {
-    const img2 = document.getElementById('img2');
-    const count2 = 1;
-    const frame2 =  new VideoFrame(img2, {
-      timestamp: count2 * FRAME_DURATION,
-      duration: FRAME_DURATION,
-    });
-    return frame2;
+    return getFrame(getElement('img2'), 1);
   }
 
   function getVideoFrame() {
-    const srcVideo = document.getElementById('src_video');
-    const countV = 2;
-    const frameV =  new VideoFrame(srcVideo, {
-      timestamp: countV * FRAME_DURATION,
-      duration: FRAME_DURATION,
-    });
-    return frameV;
+    return getFrame(getElement('src_video'), 2);
   }
 
   function getCameraFrame() {
-    const localVideo = document.getElementById('local_video');
-    const countCamera = 3;
-    const frameCamera =  new VideoFrame(localVideo, {
-      timestamp: countCamera * FRAME_DURATION,
-      duration: FRAME_DURATION,
-    });
-    return frameCamera;
+    return getFrame(getElement('local_video'), 3);
   }
 
   function drawFrame1() {
@@ -106,9 +94,9 @@
 </script>
 
 <body>
-  <button onclick="getFrame()">Frame</button>&nbsp;
+  <button onclick="checkFrame()">Check Frame</button>&nbsp;
   <button onclick="startCamera()">Camera</button>
-  <button onclick="getCameraFrameFormat()">Camera Frame</button>
+  <button onclick="checkCameraFrame()">Camera Frame</button>
   <br />
   <img id="img1" src="img/test1.jpg"  width="240px" height="180px" />
   <img id="img2" src="img/test2.png"  width="240px" height="180px" />
