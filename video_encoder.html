@@ -27,6 +27,12 @@
     //frameC.close();
   }
 
+  function checkCanvasFrame() {
+    const frame = getCanvasFrame();
+    console.log('FrameCanvas:', frame); // format: 'BGRA'
+    //frameC.close();
+  }
+
   function getElement(id) {
     const element = document.getElementById(id);
     return element;
@@ -57,6 +63,10 @@
     return getFrame(getElement('local_video'), 3);
   }
 
+  function getCanvasFrame() {
+    return getFrame(getElement('dest_canvas'), 4);
+  }
+
   function drawFrame1() {
     const frame1 = getFrame1();
 
@@ -83,6 +93,14 @@
 
   function drawCameraFrame() {
     const frame = getCameraFrame();
+
+    destCtx.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
+    destCtx.drawImage(frame, 0, 0);
+    frame.close();
+  }
+
+  function drawCanvasFrame() {
+    const frame = getCanvasFrame();
 
     destCtx.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
     destCtx.drawImage(frame, 0, 0);
@@ -144,6 +162,16 @@
     frame.close();
   }
 
+  async function encodeCanvasFrame() {
+    await prepareEncoder();
+    const frame = getFrame(getElement('dest_canvas'), frameCounter); // OK
+
+    frameCounter++;
+
+    encoder.encode(frame, { keyFrame : true}); // decoded format: I420
+    frame.close();
+  }
+
   const SRC_WIDTH = 640;
   const SRC_HEIGHT = 480;
   const DEST_WIDTH = 240;
@@ -196,6 +224,7 @@
   <button onclick="checkFrame()">Check Frame</button>&nbsp;
   <button onclick="startCamera()">Camera</button>
   <button onclick="checkCameraFrame()">Camera Frame</button>
+  <button onclick="checkCanvasFrame()">Canvas Frame</button>
   <br />
   <img id="img1" src="img/test1.jpg"  width="240px" height="180px" />
   <img id="img2" src="img/test2.png"  width="240px" height="180px" />
@@ -211,11 +240,13 @@
   <button onclick="drawFrame2()">draw frame2</button>&nbsp;
   <button onclick="drawFrameV()">draw Video</button>&nbsp;
   <button onclick="drawCameraFrame()">draw Camera</button>&nbsp;
+  <button onclick="drawCanvasFrame()">draw Canvas</button>&nbsp;
   <br />
   <button onclick="encodeFrame1()">encode frame1</button>&nbsp;
   <button onclick="encodeFrame2()">encode frame2</button>&nbsp;
   <button onclick="encodeFrameV()">encode Video</button>&nbsp;
   <button onclick="encodeCameraFrame()">encode Camera</button>&nbsp;
+  <button onclick="encodeCanvasFrame()">encode Canvas</button>&nbsp;
   <br />
   <canvas id="dest_canvas" width="240px" height="180px" style="border:black solid 1px;">
   </canvas>
