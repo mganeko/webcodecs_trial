@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Encoder/Decoder</title>
+</head>
+
+<script>
+  const FRAME_DURATION = 100 * 1000;  // Micro Seconds
+  function checkFrame() {
+    const frame1 = getFrame1();
+    console.log('Frame1:', frame1); // format: "BGRX"
+    //frame1.close();
+    
+    const frame2 = getFrame2();
+    console.log('Frame2:', frame2); // format: "BGRX"
+    //frame2.close();
+
+    const frame3 = getVideoFrame();
+    console.log('Frame3:', frame3); // format: "NV12"
+    //frame3.close();
+  }
+
+  function checkCameraFrame() {
+    const frameC = getCameraFrame();
+    console.log('FrameC:', frameC); // format:  "NV12"
+    //frameC.close();
+  }
+
+  function getElement(id) {
+    const element = document.getElementById(id);
+    return element;
+  }
+
+  function getFrame(element, frameCount) {
+    const frame = new VideoFrame(element, {
+      timestamp: frameCount * FRAME_DURATION,
+      duration: FRAME_DURATION,
+    });
+
+    return frame;
+  }
+
+  function getFrame1() {
+    return getFrame(getElement('img1'), 0);
+  }
+
+  function getFrame2() {
+    return getFrame(getElement('img2'), 1);
+  }
+
+  function getVideoFrame() {
+    return getFrame(getElement('src_video'), 2);
+  }
+
+  function getCameraFrame() {
+    return getFrame(getElement('local_video'), 3);
+  }
+
+  function drawFrame1() {
+    const frame1 = getFrame1();
+
+    destCtx.drawImage(frame1, 0, 0); // OK
+    frame1.close();
+  }
+
+  function drawFrame2() {
+    const frame2 = getFrame2();
+
+    destCtx.drawImage(frame2, 320, 240, 320, 240, 0, 0, 240, 180); // OK
+    frame2.close();
+  }
+
+  function drawFrameV() {
+    const frameV = getVideoFrame();
+
+    destCtx.drawImage(frameV, 0, 0);
+    frameV.close();
+  }
+
+  function drawCameraFrame() {
+    const frame = getCameraFrame();
+
+    destCtx.drawImage(frame, 0, 0);
+    frame.close();
+  }
+
+  async function startCamera() {
+    const localVideo = document.getElementById('local_video');
+    const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: false});
+    localVideo.srcObject = stream;
+    await localVideo.play();
+  }
+
+  let frameCounter = 0;
+  async function encodeFrame1() {
+    await prepareEncoder();
+
+    //const frame = getFrame('img1', frameCounter); // NG
+    //const frame = getFrame1(); // OK
+    const frame = getFrame(getElement('img1'), frameCounter); // OK
+
+    frameCounter++;
+
+    encoder.encode(frame, { keyFrame : true}); // decoded format: I420
+    frame.close();
+  }
+
+  async function encodeFrame2() {
+    await prepareEncoder();
+
+    //const frame = getFrame('img1', frameCounter); // NG
+    //const frame = getFrame1(); // OK
+    const frame = getFrame(getElement('img2'), frameCounter); // OK
+
+    frameCounter++;
+
+    encoder.encode(frame, { keyFrame : true}); // decoded format: I420
+    frame.close();
+  }
+
+  
+  async function encodeFrameV() {
+    await prepareEncoder();
+    const frame = getFrame(getElement('src_video'), frameCounter); // OK
+
+    frameCounter++;
+
+    encoder.encode(frame, { keyFrame : true}); // decoded format: I420
+    frame.close();
+  }
+
+  async function encodeCameraFrame() {
+    await prepareEncoder();
+    const frame = getFrame(getElement('local_video'), frameCounter); // OK
+
+    frameCounter++;
+
+    encoder.encode(frame, { keyFrame : true}); // decoded format: I420
+    frame.close();
+  }
+
+  const SRC_WIDTH = 640;
+  const SRC_HEIGHT = 480;
+  const DEST_WIDTH = 240;
+  const DEST_HEIGHT = 180;
+
+  async function prepareEncoder() {
+    if (! encoder) {
+      encoder = new VideoEncoder({
+        output: (chunk) => {
+          console.log('encoded:', chunk);
+          if (decoder) {
+            decoder.decode(chunk);
+          }
+        },
+        error: (err) => {
+          console.error(err);
+        }
+      });
+
+      await encoder.configure({
+        codec: 'vp8',
+        width: SRC_WIDTH,
+        height: SRC_HEIGHT,
+        framerate: 10
+      });
+    }
+
+
+    if (! decoder) {
+      decoder = new VideoDecoder({
+        output: async (frame) => {
+          console.log('decoced destFrame:', frame);
+          destCtx.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
+          destCtx.drawImage(frame, 0, 0);
+          
+          //writer.write(frame);
+          
+          frame.close();
+        },
+        error: (err) => {
+          console.error('Decode Error:', err);
+        }
+      })
+      await decoder.configure({ codec: 'vp8' });
+    }
+  }
+</script>
+
+<body>
+  <button onclick="checkFrame()">Check Frame</button>&nbsp;
+  <button onclick="startCamera()">Camera</button>
+  <button onclick="checkCameraFrame()">Camera Frame</button>
+  <br />
+  <img id="img1" src="img/test1.jpg"  width="240px" height="180px" />
+  <img id="img2" src="img/test2.png"  width="240px" height="180px" />
+
+  <!--
+    Video: 「ＮＨＫクリエイティブ･ライブラリー」
+    https://www2.nhk.or.jp/archives/creative/material/view.cgi?m=D0002161350_00000
+  -->
+  <video id="src_video" src="video/D0002161350_00000.mp4"  width="240px" height="180px" controls="1" /></video>
+  <video id="local_video" width="240px" height="180px" /></video>
+  <br />
+  <button onclick="drawFrame1()">draw frame1</button>&nbsp;
+  <button onclick="drawFrame2()">draw frame2</button>&nbsp;
+  <button onclick="drawFrameV()">draw Video</button>&nbsp;
+  <button onclick="drawCameraFrame()">draw Camera</button>&nbsp;
+  <br />
+  <button onclick="encodeFrame1()">encode frame1</button>&nbsp;
+  <button onclick="encodeFrame2()">encode frame2</button>&nbsp;
+  <button onclick="encodeFrameV()">encode Video</button>&nbsp;
+  <button onclick="encodeCameraFrame()">encode Camera</button>&nbsp;
+  <br />
+  <canvas id="dest_canvas" width="240px" height="180px" style="border:black solid 1px;">
+  </canvas>
+
+</body>
+<script>
+  const destCanvas = document.getElementById('dest_canvas');
+  const destCtx = destCanvas.getContext('2d');
+  let encoder = null;
+  let decoder = null;
+
+  // document.getElementById('src_video').addEventListener('loadedmetadata',
+  //   function() {
+  //     this.currentTime = 10;
+  //   },
+  // false);
+</script>
+</html>
