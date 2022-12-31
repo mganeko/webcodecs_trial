@@ -438,12 +438,13 @@
   }
 
   function frameEncDecHandlerFunc(element) {
+    const asKyeFrame = ((frameCounter % 20) === 0)
     const frame = getFrame(element, frameCounter);
     frameCounter++;
     console.log(frame);
 
-    //writer.write(frame);
-    encoder.encode(frame, { keyFrame : true}); // decoded format:
+    //encoder.encode(frame, { keyFrame : true}); // decoded format:
+    encoder.encode(frame, { keyFrame : asKyeFrame}); // decoded format:
  
     frame.close();
   }
