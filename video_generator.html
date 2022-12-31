@@ -303,6 +303,63 @@
     const element = getElement('local_video');
     startGenerate(element);
   }
+
+  function startGenerateFromCanvas() {
+    const element = getElement('dest_canvas');
+    startGenerate(element);
+  }
+
+  const INTERVAL_MILISEC = 500;
+  let clockId = 0;
+  let clockStream = null;
+  const CAPTURE_RATE = 30;    
+  function startClock() {
+    if (clockId === 0) {
+      destCtx.font = '40px Arial';
+      destCtx.fillText('Hello World!', 10, 80);
+
+      clockId = setInterval(
+        drawClock, INTERVAL_MILISEC
+      );
+      console.log('Clock start. clockId=', clockId);
+
+      clockStream = destCanvas.captureStream(CAPTURE_RATE);
+      const video = getElement('src_video');
+      video.srcObject = clockStream;
+      video.play();
+    }
+    else {
+      console.warn('Timer already started');
+    }
+  }
+
+  function stopClock() {
+    if (clockId !== 0) {
+      clearInterval(clockId);
+      clockId = 0;
+
+      if (clockStream) {
+        const video = getElement('src_video');
+        video.pause();
+        video.srcObject = null;
+        clockStream.getVideoTracks().forEach(track => track.stop());
+        clockStream = null;
+      }
+    }
+    else {
+      console.warn('Clock NOT started');
+    }
+  }
+
+  function drawClock() {
+    const d = new Date();
+    const h = d.getHours();
+    const m = d.getMinutes();
+    const s = d.getSeconds();
+    const str = `${h}:${m}:${s}`;
+    destCtx.clearRect(0, 0, SRC_WIDTH, SRC_HEIGHT);
+    destCtx.fillText(str, 10, 80);
+  }
 </script>
 
 <body>
@@ -332,6 +389,8 @@
   <button onclick="encodeFrameV()">encode Video</button>&nbsp;
   <button onclick="encodeCameraFrame()">encode Camera</button>&nbsp;
   <button onclick="encodeCanvasFrame()">encode Canvas</button>&nbsp;
+  <button onclick="startClock()">start Clock</button>&nbsp;
+  <button onclick="stopClock()">stotp Clock</button>&nbsp;
   <br />
   <canvas id="dest_canvas" width="240px" height="180px" style="border:black solid 1px;">
   </canvas>
