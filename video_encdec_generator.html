@@ -184,6 +184,15 @@
   const DEST_WIDTH = 240;
   const DEST_HEIGHT = 180;
 
+  const CODEC = 'vp8';
+  //const CODEC = 'vp09'; // unknown
+  //const CODEC = 'vp9'; // unknown
+  //const CODEC = 'vp9.01'; // unknown
+  //const CODEC = 'avc1.640030'; // unknown
+  //'av01.110'
+
+  
+  
   async function prepareEncoder() {
     if (! encoder) {
       encoder = new VideoEncoder({
@@ -199,7 +208,7 @@
       });
 
       await encoder.configure({
-        codec: 'vp8',
+        codec: CODEC,
         width: SRC_WIDTH,
         height: SRC_HEIGHT,
         framerate: 10
@@ -222,7 +231,7 @@
           console.error('Decode Error:', err);
         }
       })
-      await decoder.configure({ codec: 'vp8' });
+      await decoder.configure({ codec: CODEC });
     }
   }
 
@@ -379,10 +388,12 @@
 
 
   async function prepareEncoderForGenerator() {
+
+
     if (! encoder) {
       encoder = new VideoEncoder({
         output: (chunk) => {
-          console.log('encoded:', chunk);
+          console.log('encoded: len=' + chunk.byteLength, chunk);
           if (decoder) {
             decoder.decode(chunk);
           }
@@ -393,7 +404,7 @@
       });
 
       await encoder.configure({
-        codec: 'vp8',
+        codec: CODEC,
         width: SRC_WIDTH,
         height: SRC_HEIGHT,
         framerate: 10
@@ -416,7 +427,7 @@
           console.error('Decode Error:', err);
         }
       })
-      await decoder.configure({ codec: 'vp8' });
+      await decoder.configure({ codec: CODEC });
     }
   }
 
@@ -509,7 +520,7 @@
   <button onclick="startGenerateFromVideo()">ganerate video</button>&nbsp;
   <button onclick="startGenerateFromCamera()">ganerate camera</button>&nbsp;
   <button onclick="startGenerateFromCanvas()">ganerate canvas</button>&nbsp;&nbsp;
-  <button onclick="startGenerateWithEncoderFromCanvas()">enc/decganerate canvas</button>&nbsp;
+  <button onclick="startGenerateWithEncoderFromCanvas()">enc/dec/ganerate canvas</button>&nbsp;
 
 
 </body>
