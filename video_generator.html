@@ -357,8 +357,23 @@
     const m = d.getMinutes();
     const s = d.getSeconds();
     const str = `${h}:${m}:${s}`;
-    destCtx.clearRect(0, 0, SRC_WIDTH, SRC_HEIGHT);
-    destCtx.fillText(str, 10, 80);
+    
+    /*--
+    {
+      destCtx.clearRect(0, 0, SRC_WIDTH, SRC_HEIGHT);
+      destCtx.fillText(str, 10, 80);
+    }
+    --*/
+
+    // /*--
+    {
+      destCtx.fillStyle = "rgb(128, 128, 255)"; // enc/dec/generate NG
+      destCtx.fillRect(0, 0, DEST_WIDTH, DEST_HEIGHT); // enc/dec/generate NG
+      
+      destCtx.fillStyle = "rgb(255, 255, 0)";
+      destCtx.fillText(str, 10, 80);
+    }
+    // --*/
   }
 </script>
 
