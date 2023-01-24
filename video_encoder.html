@@ -192,14 +192,16 @@
   //const CODEC = "vp09.02.10.10.01.09.16.09.01"; // crash for video
   //const CODEC = "vp09.02.10.08.01.09.16.09.01" // crash (width, heightが適切でない？？)
   //const CODEC = "vp09.00.10.08"; // OK "encoding vp9 profile0"
-  //const CODEC = "vp09.02.10.10"; // Chrome 111 NG, 108 NG Crash "encoding vp9 profile2"
+  //const CODEC = "vp09.02.10.10"; // Chrome 111 NG, 108 NG Crash on encode ("encoding vp9 profile2")
   //const CODEC = "vp09.02.10.08"; // nG
 
   //const CODEC = "avc1.42001E"; // Chrome 111 NG, 108 NG (Encode OK, Decode ERROR)
     // Failed to execute 'decode' on 'VideoDecoder': A key frame is required after configure() or flush(). If you're using AVC formatted H.264 you must fill out the description field in the VideoDecoderConfig.
     // https://chromium.googlesource.com/chromium/src/+/eec72499092c425d927c0170eeb685ae157ff2f5/third_party/blink/web_tests/external/wpt/webcodecs/video-decoder.html
   const CODEC = "avc1.42001E";
-  const DESCRIPTION = {offset: 7229, size: 46};
+  //const CODEC = "avc1.64001E"; 
+  //const DESCRIPTION = {offset: 7229, size: 46};
+  const AVC = { format: "annexb" };
 
 
 
@@ -210,7 +212,7 @@
         output: (chunk) => {
           console.log('encoded:', chunk);
           if (decoder) {
-           decoder.decode(chunk);
+            decoder.decode(chunk);
           }
         },
         error: (err) => {
@@ -220,6 +222,7 @@
 
       await encoder.configure({
         codec: CODEC, //'vp8',
+        avc: AVC, // for H264
         width: SRC_WIDTH,
         height: SRC_HEIGHT,
         framerate: 10
