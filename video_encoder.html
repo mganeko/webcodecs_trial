@@ -11,7 +11,7 @@
     const frame1 = getFrame1();
     console.log('Frame1:', frame1); // format: "BGRX"
     //frame1.close();
-    
+
     const frame2 = getFrame2();
     console.log('Frame2:', frame2); // format: "BGRX"
     //frame2.close();
@@ -109,7 +109,7 @@
 
   async function startCamera() {
     const localVideo = document.getElementById('local_video');
-    const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: false});
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
     localVideo.srcObject = stream;
     await localVideo.play();
   }
@@ -124,7 +124,7 @@
 
     frameCounter++;
 
-    encoder.encode(frame, { keyFrame : true}); // decoded format: I420
+    encoder.encode(frame, { keyFrame: true }); // decoded format: I420
     frame.close();
   }
 
@@ -137,18 +137,18 @@
 
     frameCounter++;
 
-    encoder.encode(frame, { keyFrame : true}); // decoded format: I420
+    encoder.encode(frame, { keyFrame: true }); // decoded format: I420
     frame.close();
   }
 
-  
+
   async function encodeFrameV() {
     await prepareEncoder();
     const frame = getFrame(getElement('src_video'), frameCounter); // OK
 
     frameCounter++;
 
-    encoder.encode(frame, { keyFrame : true}); // decoded format: I420
+    encoder.encode(frame, { keyFrame: true }); // decoded format: I420
     frame.close();
   }
 
@@ -158,7 +158,7 @@
 
     frameCounter++;
 
-    encoder.encode(frame, { keyFrame : true}); // decoded format: I420
+    encoder.encode(frame, { keyFrame: true }); // decoded format: I420
     frame.close();
   }
 
@@ -168,7 +168,7 @@
 
     frameCounter++;
 
-    encoder.encode(frame, { keyFrame : true}); // decoded format: I420
+    encoder.encode(frame, { keyFrame: true }); // decoded format: I420
     frame.close();
   }
 
@@ -179,39 +179,44 @@
 
   const DEST_WIDTH = 240;
   const DEST_HEIGHT = 180;
-  
+
   // https://chromium.googlesource.com/chromium/src/+/97f084d3fdaef023ee46e6122be9fe52fd63231f/third_party/blink/web_tests/webcodecs/basic_video_encoding.html
   //
   // <sample entry 4CC>.<profile>.<level>.<bitDepth>.<chromaSubsampling>.
   // <colourPrimaries>.<transferCharacteristics>.<matrixCoefficients>.
   // <videoFullRangeFlag>
 
+  // -- VP8 --
   //const CODEC = 'vp8'; // OK
 
+  // -- VP9 --
   //const CODEC = "vp09.02.41.12.03"; // crash for video
   //const CODEC = "vp09.02.10.10.01.09.16.09.01"; // crash for video
   //const CODEC = "vp09.02.10.08.01.09.16.09.01" // crash (width, heightが適切でない？？)
   //const CODEC = "vp09.00.10.08"; // OK "encoding vp9 profile0" Chrome 111, 108
-                                  // Green Safari TP 161, ok for camera
+  // Green Safari TP 161, ok for camera
   //const CODEC = "vp09.02.10.10"; // Chrome 111 NG, 108 NG Crash on encode ("encoding vp9 profile2")
   //const CODEC = "vp09.02.10.08"; // nG
 
+  // -- H.264
   //const CODEC = "avc1.42001E"; // Chrome 111 NG, 108 NG (Encode OK, Decode ERROR)
-    // Failed to execute 'decode' on 'VideoDecoder': A key frame is required after configure() or flush(). If you're using AVC formatted H.264 you must fill out the description field in the VideoDecoderConfig.
-    // https://chromium.googlesource.com/chromium/src/+/eec72499092c425d927c0170eeb685ae157ff2f5/third_party/blink/web_tests/external/wpt/webcodecs/video-decoder.html
+  // Failed to execute 'decode' on 'VideoDecoder': A key frame is required after configure() or flush(). If you're using AVC formatted H.264 you must fill out the description field in the VideoDecoderConfig.
+  // https://chromium.googlesource.com/chromium/src/+/eec72499092c425d927c0170eeb685ae157ff2f5/third_party/blink/web_tests/external/wpt/webcodecs/video-decoder.html
   //const CODEC = "avc1.42001E";
   //const CODEC = "avc1.64001E"; 
   //const DESCRIPTION = {offset: 7229, size: 46};
   const AVC = { format: "annexb" };
 
+  // -- AV1 --
   const CODEC = "av01.0.01M.08"; // Chrome 108, 111 OK
-  
+
 
 
 
 
   async function prepareEncoder() {
-    if (! encoder) {
+    if (!encoder) {
+      const selectedCodec = getSelectedCodec();
       encoder = new VideoEncoder({
         output: (chunk) => {
           console.log('encoded:', chunk);
@@ -225,25 +230,26 @@
       });
 
       await encoder.configure({
-        codec: CODEC, //'vp8',
-        //avc: AVC, // for H264
+        codec: selectedCodec, //CODEC, //'vp8',
+        avc: AVC, // for H264
         width: SRC_WIDTH,
         height: SRC_HEIGHT,
         framerate: 10
       });
-      console.log('Encoder codec:', CODEC);
+      console.log('Encoder codec:', selectedCodec);
     }
 
 
-    if (! decoder) {
+    if (!decoder) {
+      const selectedCodec = getSelectedCodec();
       decoder = new VideoDecoder({
         output: async (frame) => {
           console.log('decoced destFrame:', frame);
           destCtx.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
           destCtx.drawImage(frame, 0, 0);
-          
+
           //writer.write(frame);
-          
+
           frame.close();
         },
         error: (err) => {
@@ -251,12 +257,18 @@
         }
       })
       await decoder.configure({
-        codec: CODEC,  /*'vp8'*/
+        codec: selectedCodec, //CODEC,  /*'vp8'*/
         //description: DESCRIPTION, // for H264
         //hardwareAcceleration: 'prefer-hardware'
       });
-      console.log('Decoder codec:', CODEC);
+      console.log('Decoder codec:', selectedCodec);
     }
+  }
+
+  function getSelectedCodec() {
+    const selectedCodec = document.getElementById('codec_select').value;
+    console.log('Selected Codec:', selectedCodec);
+    return selectedCodec;
   }
 </script>
 
@@ -266,14 +278,14 @@
   <button onclick="checkCameraFrame()">Camera Frame</button>
   <button onclick="checkCanvasFrame()">Canvas Frame</button>
   <br />
-  <img id="img1" src="img/test1.jpg"  width="240px" height="180px" />
-  <img id="img2" src="img/test2.png"  width="240px" height="180px" />
+  <img id="img1" src="img/test1.jpg" width="240px" height="180px" />
+  <img id="img2" src="img/test2.png" width="240px" height="180px" />
 
   <!--
     Video: 「ＮＨＫクリエイティブ･ライブラリー」
     https://www2.nhk.or.jp/archives/creative/material/view.cgi?m=D0002161350_00000
   -->
-  <video id="src_video" src="video/D0002161350_00000.mp4"  width="240px" height="180px" controls="1" /></video>
+  <video id="src_video" src="video/D0002161350_00000.mp4" width="240px" height="180px" controls="1" /></video>
   <video id="local_video" width="240px" height="180px" /></video>
   <br />
   <button onclick="drawFrame1()">draw frame1</button>&nbsp;
@@ -282,6 +294,12 @@
   <button onclick="drawCameraFrame()">draw Camera</button>&nbsp;
   <button onclick="drawCanvasFrame()">draw Canvas</button>&nbsp;
   <br />
+  <select id="codec_select">
+    <option value="vp8">VP8</option>
+    <option value="vp09.00.10.08">VP9</option>
+    <option value="av01.0.01M.08">AV1</option>
+    <option value="avc1.42001E">H.264</option>
+  </select>
   <button onclick="encodeFrame1()">encode frame1</button>&nbsp;
   <button onclick="encodeFrame2()">encode frame2</button>&nbsp;
   <button onclick="encodeFrameV()">encode Video</button>&nbsp;
@@ -304,4 +322,5 @@
   //   },
   // false);
 </script>
+
 </html>
