@@ -11,21 +11,21 @@
   const FRAME_DURATION = 100 * 1000;  // Micro Seconds
   function checkFrame() {
     const frame1 = getFrame1();
-    console.log('Frame1:', frame1); // format: "BGRX"
+    console.log('Frame1:', frame1, frame1.allocationSize()); // format: "BGRX"
     //frame1.close();
 
     const frame2 = getFrame2();
-    console.log('Frame2:', frame2); // format: "BGRX"
+    console.log('Frame2:', frame2, frame2.allocationSize()); // format: "BGRX"
     //frame2.close();
 
     const frame3 = getVideoFrame();
-    console.log('Frame3:', frame3); // format: "NV12"
+    console.log('Frame3:', frame3, frame3.allocationSize()); // format: "NV12"
     //frame3.close();
   }
 
   function checkCameraFrame() {
     const frameC = getCameraFrame();
-    console.log('FrameC:', frameC); // format:  "NV12"
+    console.log('FrameC:', frameC, frameC.allocationSize()); // format:  "NV12"
     //frameC.close();
   }
 
@@ -85,12 +85,15 @@
     frame2.close();
   }
 
-  function drawFrameV() {
+  async function drawFrameV() {
     const frameV = getVideoFrame();
+    const newFrame = await frameToFrame(frameV);
 
     destCtx.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
-    destCtx.drawImage(frameV, 0, 0);
+    //destCtx.drawImage(frameV, 0, 0);
+    destCtx.drawImage(newFrame, 0, 0);
     frameV.close();
+    newFrame.close();
   }
 
   function drawCameraFrame() {
@@ -172,6 +175,22 @@
 
     preEncoder.encode(frame, { keyFrame: true }); // decoded format: I420
     frame.close();
+  }
+
+  async function frameToFrame(srcFrame) {
+    const size = srcFrame.allocationSize();
+    const buf = new ArrayBuffer(size);
+    await srcFrame.copyTo(buf);
+    const format = srcFrame.format;
+    const destFrame = new VideoFrame(buf, {
+      format: format,
+      codedWidth: srcFrame.codedWidth,
+      codedHeight: srcFrame.codedHeight,
+      timestamp: srcFrame.timestamp,
+      duration: srcFrame.duration
+    });
+
+    return destFrame;
   }
 
   const SRC_WIDTH = 640;
