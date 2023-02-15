@@ -2,30 +2,28 @@
 <html>
 
 <head>
-  <title>Enc/Dec/Enc/Dec</title>
+  <title>Encoder/Decoder</title>
 </head>
 
 <script>
-  'use strict';
-
   const FRAME_DURATION = 100 * 1000;  // Micro Seconds
   function checkFrame() {
     const frame1 = getFrame1();
-    console.log('Frame1:', frame1, frame1.allocationSize()); // format: "BGRX"
+    console.log('Frame1:', frame1); // format: "BGRX"
     //frame1.close();
 
     const frame2 = getFrame2();
-    console.log('Frame2:', frame2, frame2.allocationSize()); // format: "BGRX"
+    console.log('Frame2:', frame2); // format: "BGRX"
     //frame2.close();
 
     const frame3 = getVideoFrame();
-    console.log('Frame3:', frame3, frame3.allocationSize()); // format: "NV12"
+    console.log('Frame3:', frame3); // format: "NV12"
     //frame3.close();
   }
 
   function checkCameraFrame() {
     const frameC = getCameraFrame();
-    console.log('FrameC:', frameC, frameC.allocationSize()); // format:  "NV12"
+    console.log('FrameC:', frameC); // format:  "NV12"
     //frameC.close();
   }
 
@@ -85,17 +83,12 @@
     frame2.close();
   }
 
-  async function drawFrameV() {
+  function drawFrameV() {
     const frameV = getVideoFrame();
-    //const newFrame = await frameToFrame(frameV);
-    //const newFrame = await frameToFrameCopy(frameV);
-    const newFrame = await frameConvert(frameV);
-    
+
     destCtx.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
-    //destCtx.drawImage(frameV, 0, 0);
-    destCtx.drawImage(newFrame, 0, 0);
+    destCtx.drawImage(frameV, 0, 0);
     frameV.close();
-    newFrame.close();
   }
 
   function drawCameraFrame() {
@@ -131,7 +124,7 @@
 
     frameCounter++;
 
-    preEncoder.encode(frame, { keyFrame: true }); // decoded format: I420
+    encoder.encode(frame, { keyFrame: true }); // decoded format: I420
     frame.close();
   }
 
@@ -144,19 +137,21 @@
 
     frameCounter++;
 
-    preEncoder.encode(frame, { keyFrame: true }); // decoded format: I420
+    encoder.encode(frame, { keyFrame: true }); // decoded format: I420
     frame.close();
   }
 
 
   async function encodeFrameV() {
     await prepareEncoder();
-    const frame = getFrame(getElement('src_video'), frameCounter); // OK
-
+    const frameNV12 = getFrame(getElement('src_video'), frameCounter); // OK
+    const frame = await convertNV12toI420(frameNV12);
+    
     frameCounter++;
 
-    preEncoder.encode(frame, { keyFrame: true }); // decoded format: I420
+    encoder.encode(frame, { keyFrame: true }); // decoded format: I420
     frame.close();
+    frameNV12.close();
   }
 
   async function encodeCameraFrame() {
@@ -165,7 +160,7 @@
 
     frameCounter++;
 
-    preEncoder.encode(frame, { keyFrame: true }); // decoded format: I420
+    encoder.encode(frame, { keyFrame: true }); // decoded format: I420
     frame.close();
   }
 
@@ -175,68 +170,12 @@
 
     frameCounter++;
 
-    preEncoder.encode(frame, { keyFrame: true }); // decoded format: I420
+    encoder.encode(frame, { keyFrame: true }); // decoded format: I420
     frame.close();
   }
 
-  async function frameToFrame(srcFrame) {
-    const size = srcFrame.allocationSize();
-    const buf = new ArrayBuffer(size);
-    await srcFrame.copyTo(buf);
-    const format = srcFrame.format;
-    //const format = 'I420'; //srcFrame.format;
-    const destFrame = new VideoFrame(buf, {
-      format: format,
-      codedWidth: srcFrame.codedWidth,
-      codedHeight: srcFrame.codedHeight,
-      timestamp: srcFrame.timestamp,
-      duration: srcFrame.duration
-    });
-
-    return destFrame;
-  }
-
-  async function frameToFrameCopy(srcFrame) {
-    const size = srcFrame.allocationSize();
-    const buf = new ArrayBuffer(size);
-    await srcFrame.copyTo(buf);
-
-    // === copy ===
-    
-    // --- OK ---
-    //const buf2 = buf.slice(0);
-    
-    // --- NG --
-    //const buf2 = new ArrayBuffer(size);
-    // for(let i = 0; i < size; i++) {
-    //   buf2[i] = buf[i];
-    // }
-
-    // --- OK ---
-    const buf2 = new ArrayBuffer(size);
-    const view1 = new Int8Array(buf);
-    const view2 = new Int8Array(buf2);
-    for(let i = 0; i < size; i++) {
-      view2[i] = view1[i];
-    }
-
-    // ===== copy ====
-
-
-    const format = srcFrame.format;
-    const destFrame = new VideoFrame(buf2, {
-      format: format,
-      codedWidth: srcFrame.codedWidth,
-      codedHeight: srcFrame.codedHeight,
-      timestamp: srcFrame.timestamp,
-      duration: srcFrame.duration
-    });
-
-    return destFrame;
-  }
-
   // convert NV12 --> I420
-  async function frameConvert(srcFrame) {
+  async function convertNV12toI420(srcFrame) {
     if (srcFrame.format !== 'NV12') {
       debugger;
     }
@@ -266,9 +205,7 @@
       // V
       view2[offsetV + i] = view1[sizeY + i*2 + 1];
     }
-
     // ===== convert ====
-
 
     const format = 'I420'; //srcFrame.format;
     const destFrame = new VideoFrame(buf2, {
@@ -281,6 +218,7 @@
 
     return destFrame;
   }
+
 
   const SRC_WIDTH = 640;
   const SRC_HEIGHT = 480;
@@ -320,21 +258,18 @@
   // -- AV1 --
   const CODEC = "av01.0.01M.08"; // Chrome 108, 111 OK
 
+
+
+
+
   async function prepareEncoder() {
-    await preparePostEncoder();
-    await preparePreEncoder();
-  }
-
-
-
-  async function preparePostEncoder() {
-    if (!postEncoder) {
+    if (!encoder) {
       const selectedCodec = getSelectedCodec();
-      postEncoder = new VideoEncoder({
+      encoder = new VideoEncoder({
         output: (chunk) => {
           console.log('encoded:', chunk);
-          if (postDecoder) {
-            postDecoder.decode(chunk);
+          if (decoder) {
+            decoder.decode(chunk);
           }
         },
         error: (err) => {
@@ -342,7 +277,7 @@
         }
       });
 
-      await postEncoder.configure({
+      await encoder.configure({
         codec: selectedCodec, //CODEC, //'vp8',
         avc: AVC, // for H264
         width: SRC_WIDTH,
@@ -353,9 +288,9 @@
     }
 
 
-    if (!postDecoder) {
+    if (!decoder) {
       const selectedCodec = getSelectedCodec();
-      postDecoder = new VideoDecoder({
+      decoder = new VideoDecoder({
         output: async (frame) => {
           console.log('decoced destFrame:', frame);
           destCtx.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
@@ -369,7 +304,7 @@
           console.error('Decode Error:', err);
         }
       })
-      await postDecoder.configure({
+      await decoder.configure({
         codec: selectedCodec, //CODEC,  /*'vp8'*/
         //description: DESCRIPTION, // for H264
         //hardwareAcceleration: 'prefer-hardware'
@@ -382,57 +317,6 @@
     const selectedCodec = document.getElementById('codec_select').value;
     console.log('Selected Codec:', selectedCodec);
     return selectedCodec;
-  }
-
-
-  async function preparePreEncoder() {
-    if (!preEncoder) {
-      const preCodec = 'vp8';
-      preEncoder = new VideoEncoder({
-        output: (chunk) => {
-          console.log('pre-encoded:', chunk);
-          if (preDecoder) {
-            preDecoder.decode(chunk);
-          }
-        },
-        error: (err) => {
-          console.error(err);
-        }
-      });
-
-      await preEncoder.configure({
-        codec: preCodec,  //'vp8',
-        //avc: AVC, // for H264
-        width: SRC_WIDTH,
-        height: SRC_HEIGHT,
-        framerate: 10
-      });
-      console.log('preEncoder codec:', preCodec);
-    }
-
-
-    if (!preDecoder) {
-      const preCodec = 'vp8';
-      preDecoder = new VideoDecoder({
-        output: async (frame) => {
-          console.log('pre-decoced destFrame:', frame);
-          if (postEncoder) {
-            postEncoder.encode(frame, { keyFrame: true });
-          }
-
-          frame.close();
-        },
-        error: (err) => {
-          console.error('pre-Decode Error:', err);
-        }
-      })
-      await preDecoder.configure({
-        codec: preCodec, // 'vp8'
-        //description: DESCRIPTION, // for H264
-        //hardwareAcceleration: 'prefer-hardware'
-      });
-      console.log('pre-Decoder codec:', preCodec);
-    }
   }
 </script>
 
@@ -478,11 +362,8 @@
 <script>
   const destCanvas = document.getElementById('dest_canvas');
   const destCtx = destCanvas.getContext('2d');
-  let postEncoder = null;
-  let postDecoder = null;
-  let preEncoder = null;
-  let preDecoder = null;
-
+  let encoder = null;
+  let decoder = null;
 
   // document.getElementById('src_video').addEventListener('loadedmetadata',
   //   function() {
