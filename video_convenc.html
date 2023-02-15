@@ -174,7 +174,7 @@
     frame.close();
   }
 
-  // convert NV12 --> I420
+  // convert VideoFrame format: NV12 --> I420
   async function convertNV12toI420(srcFrame) {
     if (srcFrame.format !== 'NV12') {
       debugger;
@@ -194,8 +194,9 @@
       view2[i] = view1[i];
     }
 
-    // --- UV --- (UVUV --> UUVV)
-    const sizeU = sizeY / 4;
+    // --- UV --- (UVUVUV --> UUUVVV)
+    const UNDERSAMPLING = 4;
+    const sizeU = sizeY / UNDERSAMPLING;
     const offsetU = sizeY;
     const offsetV = sizeY + sizeU;
     for(let i = 0; i < sizeU; i++) {
@@ -207,7 +208,7 @@
     }
     // ===== convert ====
 
-    const format = 'I420'; //srcFrame.format;
+    const format = 'I420';
     const destFrame = new VideoFrame(buf2, {
       format: format,
       codedWidth: srcFrame.codedWidth,
