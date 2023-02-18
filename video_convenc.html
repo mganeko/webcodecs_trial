@@ -175,6 +175,51 @@
   }
 
   // convert VideoFrame format: NV12 --> I420
+  async function convertNV12toI420_try1(srcFrame) {
+    if (srcFrame.format !== 'NV12') {
+      debugger;
+    }
+    const size = srcFrame.allocationSize();
+    const buf = new ArrayBuffer(size);
+    await srcFrame.copyTo(buf);
+
+    // === convert ===
+    const buf2 = new ArrayBuffer(size);
+    const view1 = new Int8Array(buf);
+    const view2 = new Int8Array(buf2);
+
+    // --- Y ----
+    const sizeY = srcFrame.codedWidth * srcFrame.codedHeight;
+    for(let i = 0; i < sizeY; i++) {
+      view2[i] = view1[i];
+    }
+
+    // --- UV --- (UVUVUV --> UUUVVV)
+    const UNDERSAMPLING = 4;
+    const sizeU = sizeY / UNDERSAMPLING;
+    const offsetU = sizeY;
+    const offsetV = sizeY + sizeU;
+    for(let srcIdx = 0, destIdx = 0; destIdx < sizeU; destIdx++, srcIdx += 2) {
+      // U
+      view2[offsetU + destIdx] = view1[sizeY + srcIdx];
+
+      // V
+      view2[offsetV + destIdx] = view1[sizeY + srcIdx + 1];
+    }
+    // ===== convert ====
+
+    const format = 'I420';
+    const destFrame = new VideoFrame(buf2, {
+      format: format,
+      codedWidth: srcFrame.codedWidth,
+      codedHeight: srcFrame.codedHeight,
+      timestamp: srcFrame.timestamp,
+      duration: srcFrame.duration
+    });
+
+    return destFrame;
+  }
+
   async function convertNV12toI420(srcFrame) {
     if (srcFrame.format !== 'NV12') {
       debugger;
@@ -219,7 +264,6 @@
 
     return destFrame;
   }
-
 
   const SRC_WIDTH = 640;
   const SRC_HEIGHT = 480;
