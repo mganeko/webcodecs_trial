@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Audio Encoder/Decoder</title>
+</head>
+
+<script>
+  function makeAudioData() {
+    // dictionary AudioDataInit {
+    //   required AudioSampleFormat format;
+    //   required float sampleRate;
+    //   [EnforceRange] required unsigned long numberOfFrames;
+    //   [EnforceRange] required unsigned long numberOfChannels;
+    //   [EnforceRange] required long long timestamp;  // microseconds
+    //   required BufferSource data;
+    // };
+
+    const format = 'f32-planar';
+    
+    //// sampleRate is outside of supported implementation limits: need between 3000 and 768000, received 1000.
+    //const sampleRate = 500*2; // 1000 samples/sec
+    const sampleRate = 500*6; // 3000 samples/sec
+
+
+    const frames = sampleRate * 1; // 1 sec
+    const channels = 1;
+    const timestamp = 0;
+
+    // -- samples ---
+    const step = 6;
+    const data = new Float32Array(frames);
+    for (let i = 0; i < frames; i += step) {
+      data[i] = 0.0;
+      data[i+1] = 0.3; 
+      data[i+2] = 0.5; 
+      data[i+3] = 0;
+      data[i+4] = -0.3; 
+      data[i+5] = -0.5; 
+    }
+
+    const audioData = new AudioData({
+      format: format,
+      sampleRate: sampleRate,
+      numberOfFrames: frames,
+      numberOfChannels: channels,
+      timestamp: timestamp,
+      data: data
+    });
+
+    console.log(audioData);
+    return audioData;
+  }
+
+  function playAudioData(audioData) {
+    // get F32FloatArray
+    const len = audioData.allocationSize({ planeIndex: 0}) / 4;
+    console.log('audioLen:', len);
+    const data = new Float32Array(len);
+    audioData.copyTo(data, {planeIndex: 0});
+
+    const ctx = new AudioContext();
+
+    const buffer = new AudioBuffer({
+      sampleRate: audioData.sampleRate,
+      length: audioData.allocationSize({ planeIndex: 0}) / 4,
+      numberOfChannels: audioData.numberOfChannels,
+    });
+    buffer.copyToChannel(data, 0);
+
+    // --- 鳴らす ---
+    // AudioBufferSourceNode を得る
+    // これは AudioBuffer を再生するときに使う AudioNode である
+    const source = ctx.createBufferSource();
+    // AudioBufferSourceNode にバッファーを設定する
+    source.buffer = buffer;
+    // AudioBufferSourceNode を出力先に接続すると
+    // 音声が聞こえるようになる
+    source.connect(ctx.destination);
+    // 音源の再生を始める
+    source.start();
+  }
+
+  async function tryAudio() {
+    await prepareEncoder();
+    
+    const audioData = makeAudioData();
+    
+    //playAudioData(audioData);
+    if (encoder) {
+      encoder.encode(audioData);
+    }
+
+  }
+
+  let encoder = null;
+  let decoder = null;
+
+  async function prepareEncoder() {
+    if (!encoder) {
+      const selectedCodec = 'opus'; // mp3: error
+      encoder = new AudioEncoder({
+        output: (chunk) => {
+          console.log('encoded:', chunk);
+          if (decoder) {
+            decoder.decode(chunk);
+          }
+        },
+        error: (err) => {
+          console.error(err);
+        }
+      });
+
+      await encoder.configure({
+        codec: selectedCodec,
+        numberOfChannels: 1,
+        sampleRate: 3000,
+      });
+      console.log('Encoder codec:', selectedCodec);
+    }
+
+
+    if (!decoder) {
+      const selectedCodec = 'opus';
+      decoder = new AudioDecoder({
+        output: async (audioData) => {
+          console.log('decoced audioData:', audioData);
+
+          playAudioData(audioData);
+
+          audioData.close();
+        },
+        error: (err) => {
+          console.error('Decode Error:', err);
+        }
+      })
+      await decoder.configure({
+        codec: selectedCodec,
+        numberOfChannels: 1,
+        sampleRate: 3000,
+      });
+      console.log('Decoder codec:', selectedCodec);
+    }
+  }
+</script>
+<body>
+  <button id="try_button" onclick="tryAudio()">Try</button>
+
+</body>
+</html>
