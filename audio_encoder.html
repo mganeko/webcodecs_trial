@@ -6,7 +6,19 @@
 </head>
 
 <script>
+  //const SAMPLE_RATE = 3000;
+  //const SAMPLE_RATE = 4000;
+  const SAMPLE_RATE = 8000;
+  //const SAMPLE_PER_CYCLE = 16;
+  //const SAMPLE_RATE = 16000;
+  //const SAMPLE_RATE = 48000;
+  const SAMPLE_PER_CYCLE = SAMPLE_RATE / 500; // 500 Hz
+
   function makeAudioData() {
+    // -- reset startTime ---
+    startTime = 0;
+
+
     // dictionary AudioDataInit {
     //   required AudioSampleFormat format;
     //   required float sampleRate;
@@ -20,7 +32,9 @@
     
     //// sampleRate is outside of supported implementation limits: need between 3000 and 768000, received 1000.
     //const sampleRate = 500*2; // 1000 samples/sec
-    const sampleRate = 500*6; // 3000 samples/sec
+    //const sampleRate = 500*6; // 3000 samples/sec
+    const sampleRate = SAMPLE_RATE;
+
 
 
     const frames = sampleRate * 1; // 1 sec
@@ -28,6 +42,7 @@
     const timestamp = 0;
 
     // -- samples ---
+    /* --
     const step = 6;
     const data = new Float32Array(frames);
     for (let i = 0; i < frames; i += step) {
@@ -38,6 +53,59 @@
       data[i+4] = -0.3; 
       data[i+5] = -0.5; 
     }
+    --*/
+
+    /*--
+    // -- samples ---
+    const step = 16;
+    const data = new Float32Array(frames);
+    for (let i = 0; i < frames; i += step) {
+      data[i] = 0.0;
+      data[i+1] = 0.1; 
+      data[i+2] = 0.3; 
+      data[i+3] = 0.4;      
+      data[i+4] = 0.5; 
+      data[i+5] = 0.4; 
+      data[i+6] = 0.3; 
+      data[i+7] = 0.1; 
+
+      data[i + step/2] = -data[i];
+      data[i+1 + step/2] = -data[i+1];
+      data[i+2 + step/2] = -data[i+2];
+      data[i+3 + step/2] = -data[i+3];
+      data[i+4 + step/2] = -data[i+4];
+      data[i+5 + step/2] = -data[i+5];
+      data[i+6 + step/2] = -data[i+6];
+      data[i+7 + step/2] = -data[i+7];
+
+    }
+    --*/
+
+        
+    // -- samples ---
+    const step = SAMPLE_PER_CYCLE;
+    const part = step/4;
+    const waveHeight = 0.64;
+    const waveStep = waveHeight / part;
+    const data = new Float32Array(frames);
+    for (let i = 0; i < frames; i += step) {
+      for (let j = 0; j < part; j++) {
+        data[i + j] = waveStep * j;
+      }
+      
+      for (let j = 0; j < part; j++) {
+        data[i + part + j] = waveHeight - waveStep * j;
+      }
+
+      for (let j = 0; j < part; j++) {
+        data[i + part*2 + j] = -(waveStep * j);
+      }
+
+      for (let j = 0; j < part; j++) {
+        data[i + part*3 + j] = -(waveHeight - waveStep * j);
+      }
+    }
+
 
     const audioData = new AudioData({
       format: format,
@@ -52,6 +120,8 @@
     return audioData;
   }
 
+  let ctx = null;
+  let startTime = 0;
   function playAudioData(audioData) {
     // get F32FloatArray
     const len = audioData.allocationSize({ planeIndex: 0}) / 4;
@@ -59,7 +129,12 @@
     const data = new Float32Array(len);
     audioData.copyTo(data, {planeIndex: 0});
 
-    const ctx = new AudioContext();
+    if (! ctx) {
+      ctx = new AudioContext();
+    }
+    if (startTime <= 0) {
+      startTime = ctx.currentTime;
+    }
 
     const buffer = new AudioBuffer({
       sampleRate: audioData.sampleRate,
@@ -67,6 +142,7 @@
       numberOfChannels: audioData.numberOfChannels,
     });
     buffer.copyToChannel(data, 0);
+    const offsetSec = audioData.timestamp / (1000*1000);
 
     // --- 鳴らす ---
     // AudioBufferSourceNode を得る
@@ -78,15 +154,18 @@
     // 音声が聞こえるようになる
     source.connect(ctx.destination);
     // 音源の再生を始める
-    source.start();
+    source.start(startTime + offsetSec);
   }
 
-  async function tryAudio() {
+  async function playAudio() {    
+    const audioData = makeAudioData();
+    playAudioData(audioData);
+  }
+
+  async function encodeAudio() {
     await prepareEncoder();
     
     const audioData = makeAudioData();
-    
-    //playAudioData(audioData);
     if (encoder) {
       encoder.encode(audioData);
     }
@@ -96,9 +175,22 @@
   let encoder = null;
   let decoder = null;
 
+  const CODEC = 'opus'; // OK, decoded 48k (chrome)
+
+  //const CODEC = 'mp3'; // Unsupported codec type (Chrome)
+  //const CODEC = 'flac'; // Unsupported codec type (Chrome)
+  //const CODEC = 'vorbis'; // Unsupported codec type (Chrome)
+
+  //const CODEC = 'pcm-f32'; // Unknown codec (chrome)
+  //const CODEC = 'pcm'; // Unknown codec (chrome)
+  //const CODEC = 'pcm-s16'; // Unknown codec (chrome)
+  //const CODEC = 'ulaw'; // Unknown codec (chrome)
+  //const CODEC = 'alaw'; // Unknown codec (chrome)
+
+
   async function prepareEncoder() {
     if (!encoder) {
-      const selectedCodec = 'opus'; // mp3: error
+      const selectedCodec = CODEC;
       encoder = new AudioEncoder({
         output: (chunk) => {
           console.log('encoded:', chunk);
@@ -114,14 +206,14 @@
       await encoder.configure({
         codec: selectedCodec,
         numberOfChannels: 1,
-        sampleRate: 3000,
+        sampleRate: SAMPLE_RATE,
       });
       console.log('Encoder codec:', selectedCodec);
     }
 
 
     if (!decoder) {
-      const selectedCodec = 'opus';
+      const selectedCodec = CODEC;
       decoder = new AudioDecoder({
         output: async (audioData) => {
           console.log('decoced audioData:', audioData);
@@ -137,14 +229,15 @@
       await decoder.configure({
         codec: selectedCodec,
         numberOfChannels: 1,
-        sampleRate: 3000,
+        sampleRate: SAMPLE_RATE,
       });
       console.log('Decoder codec:', selectedCodec);
     }
   }
 </script>
 <body>
-  <button id="try_button" onclick="tryAudio()">Try</button>
+  <button id="play_button" onclick="playAudio()">Play</button>
+  <button id="encode_button" onclick="encodeAudio()">Encode</button>
 
 </body>
 </html>
