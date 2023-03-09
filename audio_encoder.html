@@ -16,7 +16,7 @@
 
   function makeAudioData() {
     // -- reset startTime ---
-    startTime = 0;
+    //startTime = 0;
 
 
     // dictionary AudioDataInit {
@@ -157,8 +157,13 @@
     source.start(startTime + offsetSec);
   }
 
+  function resetStartTime() {
+    startTime = 0;
+  }
+
   async function playAudio() {    
     const audioData = makeAudioData();
+    resetStartTime();
     playAudioData(audioData);
   }
 
@@ -166,6 +171,7 @@
     await prepareEncoder();
     
     const audioData = makeAudioData();
+    resetStartTime();
     if (encoder) {
       encoder.encode(audioData);
     }
