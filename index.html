@@ -86,7 +86,13 @@
     const m = d.getMinutes();
     const s = d.getSeconds();
     const str = `${h}:${m}:${s}`;
-    ctx.clearRect(0, 0, SRC_WIDTH, SRC_HEIGHT);
+    //ctx.clearRect(0, 0, SRC_WIDTH, SRC_HEIGHT);
+    //ctx.fillText(str, 10, 80);
+
+    ctx.fillStyle = "rgb(128, 128, 255)"; // enc/dec/generate NG
+    ctx.fillRect(0, 0, SRC_WIDTH, SRC_HEIGHT); // enc/dec/generate NG
+    
+    ctx.fillStyle = "rgb(255, 255, 0)";
     ctx.fillText(str, 10, 80);
 
     //encodeImage();
@@ -139,8 +145,8 @@
       output: async (frame) => {
         console.log('decoded');
         console.log('destFrame:', frame);
-        //ctxPlayback.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
-        //ctxPlayback.drawImage(frame, 0, 0);
+        ctxPlayback.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
+        ctxPlayback.drawImage(frame, 0, 0);
         writer.write(frame);
         frame.close();
       },

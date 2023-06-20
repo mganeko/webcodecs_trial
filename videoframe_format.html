@@ -34,9 +34,11 @@
 
   function getFrame(element, frameCount) {
     const frame = new VideoFrame(element, {
-      timestamp: frameCount * FRAME_DURATION,
-      duration: FRAME_DURATION,
+      timestamp: frameCount * FRAME_DURATION, // required
+      duration: FRAME_DURATION, // optional
     });
+
+    // const frame = new VideoFrame(element); // NG
 
     return frame;
   }
