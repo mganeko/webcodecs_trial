@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>WebCodecs</title>
+</head>
+
+<body>
+  <div>
+    Canvas
+    <button id="start_clock_button" onclick="startClock()">Start Clock</button>
+    <button id="stop_clock_button" onclick="stopClock()">Stop Clock</button>
+  </div>
+  <canvas id="draw_canvas" width="240px" height="180px" style="border:black solid 1px;">
+  </canvas>
+  <br />
+  <div>
+    Canvas
+    <button id="start_encode_button" onclick="startEncode()">Start Encode</button>
+  </div>
+  <canvas id="playback_canvas" width="240" height="180px" style="border:black solid 1px;">
+  </canvas>
+  <br />
+  <video id="plaback_video" width="240" height="180px" style="border:black solid 1px;">
+  </video>
+
+
+</body>
+<script>
+  // TODO:
+  //   Decoder と Canavasを使ってみる
+  //   Canvas->Stream->Processer->Encocer->Decoder->
+
+  // VideoFrame
+  //  Canvas
+  //  Canvas Stream -> Encoder ->　BGRA
+  //   Decoder -> format:I420
+
+  const canvas = document.getElementById('draw_canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.font = '40px Arial';
+  ctx.fillText('Hello World!', 10, 80);
+  let timerId = 0;
+  let srcStream = null;
+
+  const playbackCanvas = document.getElementById('playback_canvas');
+  const ctxPlayback = playbackCanvas.getContext('2d');
+  ctxPlayback.font = '40px Arial';
+  ctxPlayback.fillText('Playback', 10, 80);
+
+  const playbackVideo = document.getElementById('plaback_video');
+
+  const INTERVAL_MILISEC = 500;
+  //const INTERVAL_MILISEC = 50;
+
+  function startClock() {
+    if (timerId === 0) {
+      timerId = setInterval(
+        drawClock, INTERVAL_MILISEC
+      );
+      console.log('Clock start. timerId=', timerId);
+    }
+    else {
+      console.warn('Timer already started');
+    }
+  }
+
+  function stopClock() {
+    if (timerId !== 0) {
+      clearInterval(timerId);
+      timerId = 0;
+    }
+    else {
+      console.warn('Timer NOT started');
+    }
+  }
+
+  const SRC_WIDTH = 240;
+  const SRC_HEIGHT = 180;
+  const DEST_WIDTH = 240;
+  const DEST_HEIGHT = 180;
+
+  function drawClock() {
+    const d = new Date();
+    const h = d.getHours();
+    const m = d.getMinutes();
+    const s = d.getSeconds();
+    const str = `${h}:${m}:${s}`;
+    //ctx.clearRect(0, 0, SRC_WIDTH, SRC_HEIGHT);
+    //ctx.fillText(str, 10, 80);
+
+    ctx.fillStyle = "rgb(128, 128, 255)"; // enc/dec/generate NG
+    ctx.fillRect(0, 0, SRC_WIDTH, SRC_HEIGHT); // enc/dec/generate NG
+    
+    ctx.fillStyle = "rgb(255, 255, 0)";
+    ctx.fillText(str, 10, 80);
+
+    //encodeImage();
+  }
+
+  let encoder = null;
+  let decoder = null;
+  let trackProcessor = null;
+  let trackGenerator = null;
+  let writer = null;
+  let mediaStream = null;
+
+  const CAPTURE_RATE = 30;
+  async function startEncode() {
+    srcStream = canvas.captureStream(CAPTURE_RATE);
+
+    //playbackVideo.srcObject = srcStream;
+    //await playbackVideo.play().catch(err => console.error(err));
+    const videoTrack = srcStream.getVideoTracks()[0];
+    console.log('VideoTrack:', videoTrack);
+    trackProcessor = new MediaStreamTrackProcessor(videoTrack);
+    const reader = trackProcessor.readable.getReader();
+
+    trackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
+    writer = trackGenerator.writable.getWriter();
+    await writer.ready;
+    mediaStream = new MediaStream();
+    mediaStream.addTrack(trackGenerator);
+
+    encoder = new VideoEncoder({
+      output: (chunk) => {
+        console.log('encoded:', chunk);
+        if (decoder) {
+          decoder.decode(chunk);
+        }
+      },
+      error: (err) => {
+        console.error(err);
+      }
+    });
+
+    await encoder.configure({
+      codec: 'vp8',
+      width: SRC_WIDTH,
+      height: SRC_HEIGHT,
+      framerate: 30
+    });
+
+    decoder = new VideoDecoder({
+      output: async (frame) => {
+        console.log('decoded');
+        console.log('destFrame:', frame);
+        ctxPlayback.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
+        ctxPlayback.drawImage(frame, 0, 0);
+        writer.write(frame);
+        frame.close();
+      },
+      error: (err) => {
+        console.error(err)
+      }
+    })
+    await decoder.configure({ codec: 'vp8' });
+
+    playbackVideo.srcObject = mediaStream;
+    playbackVideo.play().then(console.log('video start')).catch(err => {
+      console.error('play ERROR:', err);
+    });
+
+    let frameCounter = 0;
+    while (true) {
+      const result = await reader.read();
+      if (result.done) break;
+
+      const frame = result.value;
+      if (encoder.encodeQueueSize > 2) {
+        // Too many frames in flight, encoder is overwhelmed
+        // let's drop this frame.
+        frame.close();
+      } else {
+        frameCounter++;
+        const keyFrame = (frameCounter % 150 == 0);
+        console.log('src Frame', frame);
+        encoder.encode(frame, { keyFrame });
+        frame.close();
+      }
+    }
+  }
+
+
+  let frameCount = 0;
+  const FRAME_DURATION = INTERVAL_MILISEC * 1000; // micro sec.
+  function encodeImage() {
+    if (!encoder) return;
+
+    const frame = new VideoFrame(canvas, {
+      timestamp: frameCount * FRAME_DURATION,
+      duration: FRAME_DURATION,
+      codedWidth: SRC_WIDTH,
+      codedHeight: SRC_HEIGHT,
+    });
+    console.log('srcFrame:', frame);
+    const requestKeyFrame = ((frameCount % 10) === 0);
+    frameCount++;
+    encoder.encode(frame, { keyFrame: requestKeyFrame });
+
+    //ctxPlayback.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
+    //ctxPlayback.drawImage(frame, 0, 0);
+
+    frame.close();
+  }
+</script>
+
+</html>

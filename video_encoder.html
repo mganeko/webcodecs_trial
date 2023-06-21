@@ -221,6 +221,7 @@
         output: (chunk) => {
           console.log('encoded:', chunk);
           if (decoder) {
+            console.log('calling decode()');
             decoder.decode(chunk);
           }
         },
