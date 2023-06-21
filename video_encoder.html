@@ -72,6 +72,8 @@
 
     destCtx.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
     destCtx.drawImage(frame1, 0, 0); // OK
+    //destCtx.drawImage(frame1, 0, 0, SRC_WIDTH, SRC_HEIGHT, 0, 0, DEST_WIDTH, DEST_HEIGHT); // OK
+
     frame1.close();
   }
 
@@ -252,7 +254,8 @@
         output: async (frame) => {
           console.log('decoced destFrame:', frame);
           destCtx.clearRect(0, 0, DEST_WIDTH, DEST_HEIGHT);
-          destCtx.drawImage(frame, 0, 0);
+          //destCtx.drawImage(frame, 0, 0);
+          destCtx.drawImage(frame, 0, 0, SRC_WIDTH, SRC_HEIGHT, 0, 0, DEST_WIDTH, DEST_HEIGHT);
 
           //writer.write(frame);
 
@@ -295,7 +298,7 @@
   <button onclick="checkCanvasFrame()">Canvas Frame</button>
   <br />
   <img id="img1" src="img/test1.jpg" width="240px" height="180px" />
-  <img id="img2" src="img/test2.png" width="240px" height="180px" />
+  <img id="img2" src="img/test3.png" width="240px" height="180px" />
 
   <!--
     Video: 「ＮＨＫクリエイティブ･ライブラリー」
