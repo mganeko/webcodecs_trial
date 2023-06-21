@@ -12,7 +12,7 @@
   //const SAMPLE_PER_CYCLE = 16;
   //const SAMPLE_RATE = 16000;
   //const SAMPLE_RATE = 48000;
-  const SAMPLE_PER_CYCLE = SAMPLE_RATE / 500; // 500 Hz
+  //const SAMPLE_PER_CYCLE = SAMPLE_RATE / 500; // 500 Hz
 
   function makeAudioData() {
     // -- reset startTime ---
@@ -29,7 +29,7 @@
     // };
 
     const format = 'f32-planar';
-    
+
     //// sampleRate is outside of supported implementation limits: need between 3000 and 768000, received 1000.
     //const sampleRate = 500*2; // 1000 samples/sec
     //const sampleRate = 500*6; // 3000 samples/sec
@@ -81,10 +81,13 @@
     }
     --*/
 
-        
+
     // -- samples ---
-    const step = SAMPLE_PER_CYCLE;
-    const part = step/4;
+    const freq = getSelectedFrequency();
+    const samplePerCycle = SAMPLE_RATE / freq; // 500 Hz
+
+    const step = samplePerCycle;
+    const part = step / 4;
     const waveHeight = 0.64;
     const waveStep = waveHeight / part;
     const data = new Float32Array(frames);
@@ -92,17 +95,17 @@
       for (let j = 0; j < part; j++) {
         data[i + j] = waveStep * j;
       }
-      
+
       for (let j = 0; j < part; j++) {
         data[i + part + j] = waveHeight - waveStep * j;
       }
 
       for (let j = 0; j < part; j++) {
-        data[i + part*2 + j] = -(waveStep * j);
+        data[i + part * 2 + j] = -(waveStep * j);
       }
 
       for (let j = 0; j < part; j++) {
-        data[i + part*3 + j] = -(waveHeight - waveStep * j);
+        data[i + part * 3 + j] = -(waveHeight - waveStep * j);
       }
     }
 
@@ -124,12 +127,12 @@
   let startTime = 0;
   function playAudioData(audioData) {
     // get F32FloatArray
-    const len = audioData.allocationSize({ planeIndex: 0}) / 4;
+    const len = audioData.allocationSize({ planeIndex: 0 }) / 4;
     console.log('audioLen:', len);
     const data = new Float32Array(len);
-    audioData.copyTo(data, {planeIndex: 0});
+    audioData.copyTo(data, { planeIndex: 0 });
 
-    if (! ctx) {
+    if (!ctx) {
       ctx = new AudioContext();
     }
     if (startTime <= 0) {
@@ -138,11 +141,11 @@
 
     const buffer = new AudioBuffer({
       sampleRate: audioData.sampleRate,
-      length: audioData.allocationSize({ planeIndex: 0}) / 4,
+      length: audioData.allocationSize({ planeIndex: 0 }) / 4,
       numberOfChannels: audioData.numberOfChannels,
     });
     buffer.copyToChannel(data, 0);
-    const offsetSec = audioData.timestamp / (1000*1000);
+    const offsetSec = audioData.timestamp / (1000 * 1000);
 
     // --- 鳴らす ---
     // AudioBufferSourceNode を得る
@@ -161,7 +164,7 @@
     startTime = 0;
   }
 
-  async function playAudio() {    
+  async function playAudio() {
     const audioData = makeAudioData();
     resetStartTime();
     playAudioData(audioData);
@@ -169,7 +172,7 @@
 
   async function encodeAudio() {
     await prepareEncoder();
-    
+
     const audioData = makeAudioData();
     resetStartTime();
     if (encoder) {
@@ -240,10 +243,23 @@
       console.log('Decoder codec:', selectedCodec);
     }
   }
+
+  function getSelectedFrequency() {
+    const selectedFrequency = document.getElementById('frequency_select').value;
+    console.log('Selected Hz:', selectedFrequency);
+    return selectedFrequency;
+  }
 </script>
+
 <body>
+  <select id="frequency_select">
+    <option value="500">500Hz</option>
+    <option value="1000">1000Hz</option>
+  </select>
+  <br />
   <button id="play_button" onclick="playAudio()">Play</button>
   <button id="encode_button" onclick="encodeAudio()">Encode</button>
 
 </body>
+
 </html>
