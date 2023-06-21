@@ -117,6 +117,7 @@
   let frameCounter = 0;
   async function encodeFrame1() {
     await prepareEncoder();
+    updateUI();
 
     //const frame = getFrame('img1', frameCounter); // NG
     //const frame = getFrame1(); // OK
@@ -130,6 +131,7 @@
 
   async function encodeFrame2() {
     await prepareEncoder();
+    updateUI();
 
     //const frame = getFrame('img1', frameCounter); // NG
     //const frame = getFrame1(); // OK
@@ -144,6 +146,7 @@
 
   async function encodeFrameV() {
     await prepareEncoder();
+    updateUI();
     const frame = getFrame(getElement('src_video'), frameCounter); // OK
 
     frameCounter++;
@@ -154,6 +157,7 @@
 
   async function encodeCameraFrame() {
     await prepareEncoder();
+    updateUI();
     const frame = getFrame(getElement('local_video'), frameCounter); // OK
 
     frameCounter++;
@@ -164,6 +168,7 @@
 
   async function encodeCanvasFrame() {
     await prepareEncoder();
+    updateUI();
     const frame = getFrame(getElement('dest_canvas'), frameCounter); // OK
 
     frameCounter++;
@@ -264,12 +269,22 @@
       });
       console.log('Decoder codec:', selectedCodec);
     }
+
+    encoderInitialized = true;
   }
 
   function getSelectedCodec() {
     const selectedCodec = document.getElementById('codec_select').value;
     console.log('Selected Codec:', selectedCodec);
     return selectedCodec;
+  }
+
+  let encoderInitialized = false;
+  function updateUI() {
+    const codecSelect = document.getElementById('codec_select');
+    if (encoderInitialized) {
+      codecSelect.disabled = true;
+    }
   }
 </script>
 
