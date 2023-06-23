@@ -11,7 +11,7 @@
     const frame1 = getFrame1();
     console.log('Frame1:', frame1); // format: "BGRX"
     //frame1.close();
-    
+
     const frame2 = getFrame2();
     console.log('Frame2:', frame2); // format: "BGRX"
     //frame2.close();
@@ -61,6 +61,7 @@
 
   function drawFrame1() {
     const frame1 = getFrame1();
+    console.log('fram1', frame1);
 
     destCtx.drawImage(frame1, 0, 0); // OK
     frame1.close();
@@ -68,6 +69,7 @@
 
   function drawFrame2() {
     const frame2 = getFrame2();
+    console.log('fram1', frame2);
 
     destCtx.drawImage(frame2, 320, 240, 320, 240, 0, 0, 240, 180); // OK
     frame2.close();
@@ -75,6 +77,7 @@
 
   function drawFrameV() {
     const frameV = getVideoFrame();
+    console.log('framV', frameV);
 
     destCtx.drawImage(frameV, 0, 0);
     frameV.close();
@@ -82,6 +85,8 @@
 
   function drawCameraFrame() {
     const frame = getCameraFrame();
+    console.log('camera', frame);
+
 
     destCtx.drawImage(frame, 0, 0);
     frame.close();
@@ -89,7 +94,7 @@
 
   async function startCamera() {
     const localVideo = document.getElementById('local_video');
-    const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: false});
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
     localVideo.srcObject = stream;
     await localVideo.play();
   }
@@ -100,14 +105,14 @@
   <button onclick="startCamera()">Camera</button>
   <button onclick="checkCameraFrame()">Camera Frame</button>
   <br />
-  <img id="img1" src="img/test1.jpg"  width="240px" height="180px" />
-  <img id="img2" src="img/test2.png"  width="240px" height="180px" />
+  <img id="img1" src="img/test1.jpg" width="240px" height="180px" />
+  <img id="img2" src="img/test2.png" width="240px" height="180px" />
 
   <!--
     Video: 「ＮＨＫクリエイティブ･ライブラリー」
     https://www2.nhk.or.jp/archives/creative/material/view.cgi?m=D0002161350_00000
   -->
-  <video id="src_video" src="video/D0002161350_00000.mp4"  width="240px" height="180px" controls="1" /></video>
+  <video id="src_video" src="video/D0002161350_00000.mp4" width="240px" height="180px" controls="1" /></video>
   <video id="local_video" width="240px" height="180px" /></video>
   <br />
   <button onclick="drawFrame1()">draw frame1</button>&nbsp;
@@ -129,4 +134,5 @@
   //   },
   // false);
 </script>
+
 </html>
